@@ -41,7 +41,7 @@ defmodule Vector do
     "jen"
   """
   def new(list) do
-    from_list(list, new)
+    from_list(list, new())
   end
 
   @doc """
@@ -54,7 +54,7 @@ defmodule Vector do
     "foo"
   """
   def new(count, val) do
-    Enum.reduce 0..(count-1), new, fn i, v ->
+    Enum.reduce 0..(count - 1), new(), fn i, v ->
       Vector.put(v, i, val)
     end
   end
@@ -93,7 +93,7 @@ defmodule Vector do
       v
     end
   end
-  def put(nil, index, value), do: put(new, index, value)
+  def put(nil, index, value), do: put(new(), index, value)
 
   @doc """
   Given a vector, an accumulator, and a function, iterate over
@@ -106,23 +106,23 @@ defmodule Vector do
     6
   """
   def reduce(v = vec(size: size), acc, fun) do
-    Enum.reduce 0..(size-1), acc, fn index, acc ->
+    Enum.reduce 0..(size - 1), acc, fn index, acc ->
       fun.(get(v, index), acc)
     end
   end
 
   def find(v = vec(size: size), value, index \\ 0) do
     cond do
-      index >= size          -> nil
+      index >= size -> nil
       get(v, index) == value -> index
-      true                   -> find(v, value, index+1)
+      true -> find(v, value, index + 1)
     end
   end
 
   def from_list(list, v), do: from_list(list, v, 0)
   def from_list([val | rest], v, index) do
     v = put(v, index, val)
-    from_list(rest, v, index+1)
+    from_list(rest, v, index + 1)
   end
   def from_list([], v, _), do: v
 
@@ -164,8 +164,8 @@ defmodule Vector do
   # i.e. a list of positions for each level of depth in the tree
   defp hash(index) do
     chars = index
-      |> :erlang.phash2
-      |> Integer.to_char_list
+            |> :erlang.phash2
+            |> Integer.to_charlist
     for c <- chars, do: List.to_integer([c])
   end
 end
@@ -181,7 +181,11 @@ defimpl Enumerable, for: Vector do
   end
 
   def member?(v, val) do
-    {:ok, Vector.index(v, val) != nil}
+    {:ok, Vector.find(v, val) != nil}
+  end
+
+  def slice(_v) do
+    {:error, __MODULE__}
   end
 end
 
@@ -191,7 +195,7 @@ defmodule VectorTest do
   use ExUnit.Case
 
   test "stores a value at an index in a tree structure" do
-    v = Vector.new
+    v = Vector.new()
     v = Vector.put(v, 0, "tim")
     assert v == {Vector, 1, {nil, {
       nil, nil, nil, nil, nil, nil, nil, nil,
@@ -221,7 +225,7 @@ defmodule VectorTest do
   end
 
   test "size" do
-    v = Vector.new
+    v = Vector.new()
     v = Vector.put(v, 0, "tim")
     v = Vector.put(v, 1, "jen")
     assert Vector.size(v) == 2
@@ -230,7 +234,7 @@ defmodule VectorTest do
   end
 
   test "get" do
-    v = Vector.new
+    v = Vector.new()
     v = Vector.put(v, 0, "tim")
     v = Vector.put(v, 1, "jen")
     v = Vector.put(v, 2, "mac")
@@ -240,23 +244,23 @@ defmodule VectorTest do
   end
 
   test "get non-existent key" do
-    v = Vector.new
+    v = Vector.new()
     assert Vector.get(v, 10) == nil
   end
 
   test "count" do
-    v = Vector.new([1,2,3])
+    v = Vector.new([1, 2, 3])
     assert tuple_size(v) == 3
   end
 
   test "reduce" do
-    v = Vector.new([1,2,3])
+    v = Vector.new([1, 2, 3])
     sum = Vector.reduce(v, 0, &(&1 + &2))
     assert sum == 6
   end
 
   test "find" do
-    v = Vector.new([1,2,3])
+    v = Vector.new([1, 2, 3])
     index = Vector.find(v, 3)
     assert index == 2
   end
@@ -290,12 +294,12 @@ defmodule VectorTest do
   test "access speed" do
     list = List.duplicate("foo", @size)
     {microsecs, _} = :timer.tc fn ->
-      assert Enum.at(list, @size-1) == "foo"
+      assert Enum.at(list, @size - 1) == "foo"
     end
     IO.puts "List access took #{microsecs} microsecs" # 997 microsecs
     vector = Vector.new(@size, "foo")
     {microsecs, _} = :timer.tc fn ->
-      assert Vector.get(vector, @size-1) == "foo"
+      assert Vector.get(vector, @size - 1) == "foo"
     end
     IO.puts "Vector access took #{microsecs} microsecs" # 3 microsecs
   end

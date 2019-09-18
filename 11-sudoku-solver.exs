@@ -54,9 +54,9 @@ defmodule SudokuSolver do
   """
   def solve(board) do
     board
-      |> solutions
-      |> map(fn s -> apply_solution(board, s) end)
-      |> find(fn b -> SudokuBoard.solved?(b) end)
+    |> solutions
+    |> map(fn s -> apply_solution(board, s) end)
+    |> find(fn b -> SudokuBoard.solved?(b) end)
   end
 
   @doc """
@@ -73,13 +73,22 @@ defmodule SudokuSolver do
     iex> SudokuSolver.apply_solution(board, [2, 2])
     [[1, 2], [2, 1]]
   """
-  def apply_solution(board, [first | rest]) do
-    size = count(board)
-    board = List.flatten(board)
-    pos = find_index board, fn col -> col == nil end
-    List.replace_at(board, pos, first)
-      |> chunk(size)
-      |> apply_solution(rest)
+  def apply_solution(board, solutions) do
+    {board, []} = Enum.map_reduce(
+      board,
+      solutions,
+      fn row, acc ->
+        Enum.map_reduce(
+          row,
+          acc,
+          fn
+            nil, [x | new_acc] -> {x, new_acc}
+            x, new_acc -> {x, new_acc}
+          end
+        )
+      end
+    )
+    board
   end
   def apply_solution(board, []), do: board
 
@@ -95,7 +104,8 @@ defmodule SudokuSolver do
     [[2, 1, 1, 2], [2, 1, 2, 1]]
   """
   def solutions(board) do
-    possibles(board) |> combinations
+    possibles(board)
+    |> combinations
   end
 
   defp possibles([row | rest]) do
@@ -149,18 +159,24 @@ defmodule SudokuSolverTest do
   end
 
   test "solves a small board" do
-    board = [[1,   nil, 3  ],
-             [3,   nil, 2  ],
-             [nil, 3,   nil]]
-    assert solve(board) == [[1, 2, 3],
-                            [3, 1, 2],
-                            [2, 3, 1]]
+    board = [
+      [1, nil, 3],
+      [3, nil, 2],
+      [nil, 3, nil]
+    ]
+    assert solve(board) == [
+             [1, 2, 3],
+             [3, 1, 2],
+             [2, 3, 1]
+           ]
   end
 
   test "returns nil on unsolvable board" do
-    board = [[1,   nil, 3  ],
-             [3,   nil, 2  ],
-             [nil, 2,   nil]]
+    board = [
+      [1, nil, 3],
+      [3, nil, 2],
+      [nil, 2, nil]
+    ]
     assert solve(board) == nil
   end
 

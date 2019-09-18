@@ -58,9 +58,8 @@ defmodule Frank do
   end
 
   defmodule Path do
-    defmacro get(path, contents) do
-      contents = Macro.escape(Keyword.get(contents, :do), unquote: true)
-      quote bind_quoted: binding do
+    defmacro get(path, do: contents) do
+      quote do
         def unquote(String.to_atom(path))(data) do
           unquote(contents)
         end
@@ -80,10 +79,13 @@ defmodule Frank do
     end
 
     def response(code, body, headers \\ []) do
-      if is_binary(body) do
-        body = :erlang.bitstring_to_list(body)
-      end
-      headers = [code: code, content_length: Integer.to_char_list(IO.iodata_length(body))] ++ headers
+      body =
+        if is_binary(body) do
+          :erlang.bitstring_to_list(body)
+        else
+          body
+        end
+      headers = [code: code, content_length: Integer.to_charlist(IO.iodata_length(body))] ++ headers
       {:proceed, [response: {:response, headers, body}]}
     end
   end

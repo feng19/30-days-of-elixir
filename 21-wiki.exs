@@ -28,6 +28,7 @@ defmodule Wiki do
     options = [server_name: 'foo', server_root: '/tmp', document_root: '/tmp', port: 3000, modules: [__MODULE__]]
     {:ok, _pid} = :inets.start :httpd, options
     IO.puts "running on port 3000"
+    receive do: (_ -> :ok) # TODO better way to wait?
   end
 
   def unquote(:do)(data) do
@@ -67,9 +68,9 @@ defmodule Wiki do
 
   def format(content, name) do
     content
-      |> sanitize
-      |> breakify
-      |> linkify
+      |> sanitize()
+      |> breakify()
+      |> linkify()
       |> layoutify(name)
   end
 
@@ -111,7 +112,7 @@ defmodule Wiki do
   end
 
   def response(code, body, headers \\ []) do
-    headers = [code: code, content_length: Integer.to_char_list(IO.iodata_length(body))] ++ headers
+    headers = [code: code, content_length: Integer.to_charlist(IO.iodata_length(body))] ++ headers
     {:proceed, [response: {:response, headers, body}]}
   end
 end

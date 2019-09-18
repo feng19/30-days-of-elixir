@@ -18,7 +18,7 @@ defmodule App do
   def unquote(:do)(data) do
     response = case mod(data, :request_uri) do
       '/' -> 'hello world'
-      _   -> ['hello ', mod(data, :request_uri)]
+      [?/ | request_uri] -> ['hello ', request_uri]
     end
     {:proceed, [response: {200, response}]}
   end

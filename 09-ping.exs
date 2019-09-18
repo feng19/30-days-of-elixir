@@ -46,13 +46,13 @@ defmodule Ping do
   end
 
   def ping_args(ip) do
-    wait_opt = if darwin?, do: '-W', else: '-w'
+    wait_opt = if darwin?(), do: "-W", else: "-w"
     ["-c", "1", wait_opt, "5", "-s", "1", ip]
   end
 
   def darwin? do
     {output, 0} = System.cmd("uname", [])
-    String.rstrip(output) == "Darwin"
+    String.trim_trailing(output) == "Darwin"
   end
 end
 
@@ -65,28 +65,31 @@ defmodule Subnet do
     Enum.each all, fn ip ->
       # Task.start gives better logging than spawn when things go awry.
       # http://elixir-lang.org/getting-started/processes.html#tasks
-      Task.start(Ping, :ping_async, [ip, self])
+      Task.start(Ping, :ping_async, [ip, self()])
     end
-    wait HashDict.new, Enum.count(all)
+    wait Map.new, Enum.count(all)
   end
 
   @doc """
   Given a class-C subnet string like '192.168.1.x', return list of all 254 IPs therein.
   """
   def ips(subnet) do
-    subnet = Regex.run(~r/^\d+\.\d+\.\d+\./, subnet) |> Enum.at(0)
-    Enum.to_list(1..254) |> Enum.map fn i -> "#{subnet}#{i}" end
+    subnet = Regex.run(~r/^\d+\.\d+\.\d+\./, subnet)
+             |> Enum.at(0)
+    Enum.map 1..254, fn i -> "#{subnet}#{i}" end
   end
 
-  defp wait(dict, 0), do: dict
-  defp wait(dict, remaining) do
-    receive do
-      {:ok, ip, pingable?} ->
-        dict = Dict.put(dict, ip, pingable?)
-      {:error, ip, error} ->
-        IO.puts "#{inspect error} for #{ip}"
-    end
-    wait dict, remaining - 1
+  defp wait(map, 0), do: map
+  defp wait(map, remaining) do
+    map =
+      receive do
+        {:ok, ip, pingable?} ->
+          Map.put(map, ip, pingable?)
+        {:error, ip, error} ->
+          IO.puts "#{inspect error} for #{ip}"
+          map
+      end
+    wait map, remaining - 1
   end
 end
 
@@ -95,10 +98,11 @@ end
 case System.argv do
   [subnet] ->
     results = Subnet.ping(subnet)
-    Enum.filter_map(results, fn {_ip, exists} -> exists end, fn {ip, _} -> ip end)
-      |> Enum.sort
-      |> Enum.join("\n")
-      |> IO.puts
+    Enum.filter(results, fn {_ip, exists} -> exists end)
+    |> Enum.map(fn {ip, _} -> ip end)
+    |> Enum.sort
+    |> Enum.join("\n")
+    |> IO.puts
   _ ->
     ExUnit.start
 

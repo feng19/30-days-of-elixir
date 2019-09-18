@@ -57,6 +57,7 @@ defmodule Table do
 
   def manage_resources(forks, waiting \\ []) do
     # distribute forks to waiting philosophers
+    {forks, waiting} =
     if length(waiting) > 0 do
       names = for {_, phil} <- waiting, do: phil.name
       IO.puts "#{length waiting} philosopher#{if length(waiting) == 1, do: '', else: 's'} waiting: #{Enum.join names, ", "}"
@@ -64,7 +65,12 @@ defmodule Table do
         [{pid, _} | waiting] = waiting
         [fork1, fork2 | forks] = forks
         send pid, {:eat, [fork1, fork2]}
+        {forks, waiting}
+      else
+        {forks, waiting}
       end
+    else
+      {forks, waiting}
     end
     receive do
       {:sit_down, pid, phil} ->
@@ -81,11 +87,12 @@ end
 defmodule Dine do
 
   def dine(phil, table) do
-    send table, {:sit_down, self, phil}
+    send table, {:sit_down, self(), phil}
+    phil =
     receive do
       {:eat, forks} ->
         phil = eat(phil, forks, table)
-        phil = think(phil, table)
+        think(phil, table)
     end
     dine(phil, table)
   end
@@ -93,7 +100,7 @@ defmodule Dine do
   def eat(phil, forks, table) do
     phil = %{phil | ate: phil.ate + 1}
     IO.puts "#{phil.name} is eating (count: #{phil.ate})"
-    :timer.sleep(:random.uniform(1000))
+    :timer.sleep(:rand.uniform(1000))
     IO.puts "#{phil.name} is done eating"
     send table, {:give_up_seat, forks, phil}
     phil
@@ -101,11 +108,10 @@ defmodule Dine do
 
   def think(phil, _) do
     IO.puts "#{phil.name} is thinking (count: #{phil.thunk})"
-    :timer.sleep(:random.uniform(1000))
+    :timer.sleep(:rand.uniform(1000))
     %{phil | thunk: phil.thunk + 1}
   end
 
 end
 
-:random.seed(:erlang.now)
 Table.simulate

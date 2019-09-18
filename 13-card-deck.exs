@@ -8,8 +8,8 @@ defmodule Deck do
   """
   def new do
     for suit <- ~w(Hearts Clubs Diamonds Spades),
-       face <- [2, 3, 4, 5, 6, 7, 8, 9, 10, "J", "Q", "K", "A"],
-       do: {suit, face}
+        face <- [2, 3, 4, 5, 6, 7, 8, 9, 10, "J", "Q", "K", "A"],
+        do: {suit, face}
   end
 
   @doc """
@@ -17,7 +17,7 @@ defmodule Deck do
 
     If no deck is given, then create a new one and shuffle that.
   """
-  def shuffle(deck \\ new) do
+  def shuffle(deck \\ new()) do
     Enum.shuffle(deck)
   end
 
@@ -41,7 +41,7 @@ defmodule Deck do
     _deal(rest_cards, rest_players ++ [player], deal_fn, cards_left - 1)
   end
 
-  def _deal([], players, _, _), do: { players, [] }
+  def _deal([], players, _, _), do: {players, []}
 
 
 end
@@ -52,38 +52,95 @@ defmodule DeckTest do
   use ExUnit.Case
 
   test "new" do
-    deck = Deck.new
-    assert Enum.at(deck, 0)  == {"Hearts", 2}
+    deck = Deck.new()
+    assert Enum.at(deck, 0) == {"Hearts", 2}
     assert Enum.at(deck, 51) == {"Spades", "A"}
   end
 
   test "shuffle" do
     :random.seed(:erlang.now)
-    deck = Deck.shuffle
-    assert Deck.shuffle != deck
+    deck = Deck.shuffle()
+    assert Deck.shuffle() != deck
     assert length(Deck.shuffle) == 52
   end
 
   test "deal" do
-    players = [{"tim", []}, {"jen", []}, {"mac", []}, {"kai", []}]
-    deck = Deck.new
-    {players, deck} = Deck.deal(deck, players, fn (card, {name, cards}) -> {name, cards ++ [card]} end)
-    assert Enum.at(players, 0) == {"tim", [{"Hearts", 2}, {"Hearts", 6}, {"Hearts",  10}, {"Hearts", "A"}, {"Clubs", 5}, {"Clubs",   9}, {"Clubs",  "K"}, {"Diamonds", 4}, {"Diamonds",   8}, {"Diamonds", "Q"}, {"Spades", 3}, {"Spades",  7}, {"Spades", "J"}]}
-    assert Enum.at(players, 1) == {"jen", [{"Hearts", 3}, {"Hearts", 7}, {"Hearts", "J"}, {"Clubs",    2}, {"Clubs", 6}, {"Clubs",  10}, {"Clubs",  "A"}, {"Diamonds", 5}, {"Diamonds",   9}, {"Diamonds", "K"}, {"Spades", 4}, {"Spades",  8}, {"Spades", "Q"}]}
-    assert Enum.at(players, 2) == {"mac", [{"Hearts", 4}, {"Hearts", 8}, {"Hearts", "Q"}, {"Clubs",    3}, {"Clubs", 7}, {"Clubs", "J"}, {"Diamonds", 2}, {"Diamonds", 6}, {"Diamonds",  10}, {"Diamonds", "A"}, {"Spades", 5}, {"Spades",  9}, {"Spades", "K"}]}
-    assert Enum.at(players, 3) == {"kai", [{"Hearts", 5}, {"Hearts", 9}, {"Hearts", "K"}, {"Clubs",    4}, {"Clubs", 8}, {"Clubs", "Q"}, {"Diamonds", 3}, {"Diamonds", 7}, {"Diamonds", "J"}, {"Spades",     2}, {"Spades", 6}, {"Spades", 10}, {"Spades", "A"}]}
+    players = [tim: [], jen: [], mac: [], kai: []]
+    deck = Deck.new()
+    {players, deck} = Deck.deal(deck, players, fn (card, {name, cards}) -> {name, [card | cards]} end)
+    assert Keyword.get(players, :tim) == [
+             {"Spades", "J"},
+             {"Spades", 7},
+             {"Spades", 3},
+             {"Diamonds", "Q"},
+             {"Diamonds", 8},
+             {"Diamonds", 4},
+             {"Clubs", "K"},
+             {"Clubs", 9},
+             {"Clubs", 5},
+             {"Hearts", "A"},
+             {"Hearts", 10},
+             {"Hearts", 6},
+             {"Hearts", 2}
+           ]
+    assert Keyword.get(players, :jen) == [
+             {"Spades", "Q"},
+             {"Spades", 8},
+             {"Spades", 4},
+             {"Diamonds", "K"},
+             {"Diamonds", 9},
+             {"Diamonds", 5},
+             {"Clubs", "A"},
+             {"Clubs", 10},
+             {"Clubs", 6},
+             {"Clubs", 2},
+             {"Hearts", "J"},
+             {"Hearts", 7},
+             {"Hearts", 3}
+           ]
+    assert Keyword.get(players, :mac) == [
+             {"Spades", "K"},
+             {"Spades", 9},
+             {"Spades", 5},
+             {"Diamonds", "A"},
+             {"Diamonds", 10},
+             {"Diamonds", 6},
+             {"Diamonds", 2},
+             {"Clubs", "J"},
+             {"Clubs", 7},
+             {"Clubs", 3},
+             {"Hearts", "Q"},
+             {"Hearts", 8},
+             {"Hearts", 4}
+           ]
+    assert Keyword.get(players, :kai) == [
+             {"Spades", "A"},
+             {"Spades", 10},
+             {"Spades", 6},
+             {"Spades", 2},
+             {"Diamonds", "J"},
+             {"Diamonds", 7},
+             {"Diamonds", 3},
+             {"Clubs", "Q"},
+             {"Clubs", 8},
+             {"Clubs", 4},
+             {"Hearts", "K"},
+             {"Hearts", 9},
+             {"Hearts", 5}
+           ]
     assert deck == []
   end
 
   test "deal 5 cards per player" do
-    players = [{"tim", []}, {"jen", []}, {"mac", []}, {"kai", []}]
-    deck = Deck.new
-    {players, deck} = Deck.deal(deck, players, fn (card, {name, cards}) -> {name, cards ++ [card]} end, 5)
-    assert Enum.at(players, 0) == {"tim", [{"Hearts", 2}, {"Hearts", 6}, {"Hearts",  10}, {"Hearts", "A"}, {"Clubs", 5}]}
-    assert Enum.at(players, 1) == {"jen", [{"Hearts", 3}, {"Hearts", 7}, {"Hearts", "J"}, {"Clubs",    2}, {"Clubs", 6}]}
-    assert Enum.at(players, 2) == {"mac", [{"Hearts", 4}, {"Hearts", 8}, {"Hearts", "Q"}, {"Clubs",    3}, {"Clubs", 7}]}
-    assert Enum.at(players, 3) == {"kai", [{"Hearts", 5}, {"Hearts", 9}, {"Hearts", "K"}, {"Clubs",    4}, {"Clubs", 8}]}
-    [next | rest_of_deck] = deck
+    players = [tim: [], jen: [], mac: [], kai: []]
+    deck = Deck.new()
+    {players, deck} = Deck.deal(deck, players, fn (card, {name, cards}) -> {name, [card | cards]} end, 5)
+    assert Keyword.get(players, :tim) == [{"Clubs", 5}, {"Hearts", "A"}, {"Hearts", 10}, {"Hearts", 6}, {"Hearts", 2}]
+    assert Keyword.get(players, :jen) == [{"Clubs", 6}, {"Clubs", 2}, {"Hearts", "J"}, {"Hearts", 7}, {"Hearts", 3}]
+    assert Keyword.get(players, :mac) == [{"Clubs", 7}, {"Clubs", 3}, {"Hearts", "Q"}, {"Hearts", 8}, {"Hearts", 4}]
+    assert Keyword.get(players, :kai) == [{"Clubs", 8}, {"Clubs", 4}, {"Hearts", "K"}, {"Hearts", 9}, {"Hearts", 5}]
+    assert Keyword.keys(players) == [:tim, :jen, :mac, :kai]
+    [next | _rest_of_deck] = deck
     assert next == {"Clubs", 9}
   end
 end

@@ -17,7 +17,7 @@ defmodule WebServer do
   """
 
   def server do
-    {:ok, lsock} = :gen_tcp.listen(3000, [:binary, {:packet, 0}, {:active, false}])
+    {:ok, lsock} = :gen_tcp.listen(3000, [:binary, {:packet, 0}, {:active, false}, {:reuseaddr, true}])
     accept_connection(lsock)
   end
 

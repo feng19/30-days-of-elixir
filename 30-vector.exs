@@ -28,7 +28,7 @@ defmodule Vector do
     {Vector, 2, 1, ["tim", "jen"]}
   """
   def new(list) do
-    depth = round(Float.ceil(length(Integer.to_char_list((length(list) - 1), 2)) / @bits))
+    depth = round(Float.ceil(length(Integer.to_charlist((length(list) - 1), 2)) / @bits))
     vec(size: length(list), depth: depth, tree: tree_from_list(list, depth))
   end
 
@@ -62,18 +62,20 @@ defmodule Vector do
      iex> Vector.get(v, 0)
      "tim"
   """
-  def put(vec(size: size, depth: depth, tree: tree), index, value) do
-    if index > size, do: raise "index too large"
-    if index == size, do: size = index + 1
+  def put(vec(size: size, depth: depth, tree: tree), index, value) when index <= size do
+    size = if index == size, do: index + 1, else: size
     # grow tree
-    if size > depth * @width do
-      depth = depth + 1
-      tree = [tree]
-    end
+    {depth, tree} =
+      if size > depth * @width do
+        {depth + 1, [tree]}
+      else
+        {depth, tree}
+      end
     # attach node
     tree = do_put tree, key(index, depth), value
     vec(size: size, depth: depth, tree: tree)
   end
+  def put(_vec, _index, _value), do: raise "index too large"
 
   @doc """
   Given a vector, an accumulator, and a function, iterate over
@@ -86,20 +88,20 @@ defmodule Vector do
     6
   """
   def reduce(vec(size: size, depth: depth, tree: tree), acc, fun) do
-    do_reduce tree, depth-1, size, 0, acc, fun
+    do_reduce tree, depth - 1, size, 0, acc, fun
   end
 
   defp do_reduce(node, depth, size, index, acc, fun) when depth > 0 and is_list(node) do
     Enum.reduce Enum.with_index(node), acc, fn {n, i}, acc ->
-      do_reduce n, depth-1, size, index + (i * @width), acc, fun
+      do_reduce n, depth - 1, size, index + (i * @width), acc, fun
     end
   end
   defp do_reduce(node, _, size, index, acc, fun) when is_list(node) do
-    Enum.reduce Enum.slice(node, 0..(size-index-1)), acc, fun
+    Enum.reduce Enum.slice(node, 0..(size - index - 1)), acc, fun
   end
   defp do_reduce(_, _, _, _, acc, _), do: acc
 
-  defp key(index, depth) when depth > 0, do: key(index, depth, [])
+  defp key(index, depth), do: key(index, depth, [])
   defp key(index, depth, indeces) when depth > 0 do
     level = (depth - 1) * @bits
     indeces = indeces ++ [(index >>> level) &&& @mask]
@@ -109,8 +111,8 @@ defmodule Vector do
 
   defp tree_from_list(list, depth) when depth > 1 do
     list
-      |> Enum.chunk(@width, @width, List.duplicate(nil, @width))
-      |> tree_from_list(depth - 1)
+    |> Enum.chunk_every(@width, @width, List.duplicate(nil, @width))
+    |> tree_from_list(depth - 1)
   end
   defp tree_from_list(list, _), do: list
 
@@ -122,9 +124,12 @@ defmodule Vector do
 
   defp do_put(tree, [idx | rest_key], value) do
     rest = do_put(Enum.at(tree, idx) || [], rest_key, value)
-    if length(tree) <= idx do # expand this node
-      tree = tree ++ List.duplicate(nil, idx - length(tree) + 1)
-    end
+    tree =
+      if length(tree) <= idx do # expand this node
+        tree ++ List.duplicate(nil, idx - length(tree) + 1)
+      else
+        tree
+      end
     List.replace_at tree, idx, rest
   end
   defp do_put(_, [], value), do: value
@@ -164,7 +169,7 @@ defmodule VectorTest do
   end
 
   test "reduce" do
-    v = Vector.new([1,2,3,4,5,6])
+    v = Vector.new([1, 2, 3, 4, 5, 6])
     sum = Vector.reduce(v, 0, &(&1 + &2))
     assert sum == 21
   end
@@ -200,13 +205,13 @@ defmodule VectorTest do
   test "access speed" do
     list = List.duplicate("foo", @size)
     {microsecs, _} = :timer.tc fn ->
-      assert Enum.at(list, @size-1) == "foo"
+      assert Enum.at(list, @size - 1) == "foo"
     end
     IO.puts "List access took #{microsecs} microsecs" # 997 microsecs
     list = List.duplicate("foo", @size)
     vector = Vector.new(list)
     {microsecs, _} = :timer.tc fn ->
-      assert Vector.get(vector, @size-1) == "foo"
+      assert Vector.get(vector, @size - 1) == "foo"
     end
     IO.puts "Vector access took #{microsecs} microsecs" # 3 microsecs
   end

@@ -10,28 +10,28 @@ require Record
 
 defmodule Frank do
   @moduledoc """
-    Frank is a micro web library that provides a DSL for defining routes.
+  Frank is a micro web library that provides a DSL for defining routes.
 
-        defmodule MyApp do
-          use Frank
+      defmodule MyApp do
+        use Frank
 
-          get "/foo" do
-            response 200, "foo!"
-          end
-
-          get "/hello/:name" do
-            response 200, "greetings \#{name}"
-          end
+        get "/foo" do
+          response 200, "foo!"
         end
 
-        Frank.sing(MyApp)
+        get "/hello/:name" do
+          response 200, "greetings \#{name}"
+        end
+      end
 
-    To run:
+      Frank.sing(MyApp)
 
-    $ iex 28-frank-3.exs
+  To run:
 
-    ... then point your browser to http://localhost:3000
-    """
+  $ iex 28-frank-3.exs
+
+  ... then point your browser to http://localhost:3000
+  """
 
   Record.defrecord :mod, Record.extract(:mod, from_lib: "inets/include/httpd.hrl")
 
@@ -64,12 +64,14 @@ defmodule Frank do
     end
 
     defp build_pattern(path) do
-      path = String.lstrip(path, ?/)
+      path = String.trim_leading(path, "/")
       for part <- String.split(path, "/") do
         cond do
           String.starts_with?(part, ":") ->
             # expands (when unquoted) to a variable name
-            {String.to_atom(String.lstrip(part, ?:)), [], nil}
+            part = String.trim_leading(part, ":")
+                   |> String.to_atom
+            {part, [], nil}
           true ->
             # literal string match
             part
@@ -90,10 +92,13 @@ defmodule Frank do
     end
 
     def response(code, body, headers \\ []) do
-      if is_binary(body) do
-        body = :erlang.bitstring_to_list(body)
-      end
-      headers = [code: code, content_length: Integer.to_char_list(IO.iodata_length(body))] ++ headers
+      body =
+        if is_binary(body) do
+          :erlang.bitstring_to_list(body)
+        else
+          body
+        end
+      headers = [code: code, content_length: Integer.to_charlist(IO.iodata_length(body))] ++ headers
       {:proceed, [response: {:response, headers, body}]}
     end
   end
